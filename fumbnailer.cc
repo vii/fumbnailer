@@ -150,6 +150,16 @@ void opencv_from_ffmpeg_frame(SwsContext *sws,AVFrame*ffmpeg,IplImage*opencv)
 
 typedef bool(*frame_filter_t)(const frame_info&);
 
+void save_thumbnail(const char*filename,IplImage*opencv)
+{
+  const int width = 240;
+  CvSize size = {width,(opencv->height*width)/opencv->width}; 
+  IplImage*thumb = cvCreateImage(size, IPL_DEPTH_8U, 1);
+  cvResize(opencv,thumb, CV_INTER_AREA);
+  cvSaveImage(filename,thumb);
+  cvReleaseImage(&thumb);
+}
+
 bool decode_and_convert_frame(AVCodecContext*avcc,AVPacket*pkt,SwsContext *sws,AVFrame*frame,IplImage*opencv)
 {
   int got_picture;
@@ -275,7 +285,7 @@ void process_video(const char*video_filename,frame_filter_t filter,frameprocesso
       AVStream*stream=ic->streams[pkt->stream_index];
       AVCodecContext*avcc=stream->codec;
       decode_and_convert_frame(avcc,pkt,sws,frame,opencv);
-      cvSaveImage((thumb_prefix+tag+thumb_suffix).c_str(),opencv);
+      save_thumbnail((thumb_prefix+tag+thumb_suffix).c_str(),opencv);
       av_free_packet(pkt);
     }
   }
@@ -352,12 +362,12 @@ void fumbnail(const char*video_filename,const char*thumbnail_filebase)
       &opencv,
       &mest,
      0};
-  process_video(video_filename,keyframe_filter,list,thumbnail_filebase,".png");
+  process_video(video_filename,keyframe_filter,list,thumbnail_filebase,".jpg");
 }
 int main(int argc,char*argv[])
 {
   if(3 != argc)
-    e("usage: videofile thumbnail");
+    e("usage: videofile thumbnail-basename");
   avcodec_register_all();
   av_register_all();
 
